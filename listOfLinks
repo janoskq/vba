@@ -1,0 +1,112 @@
+Sub ListOfLinks()
+
+Dim aLinks As Variant
+Dim lengthLink As Integer
+Dim lastSlash As Integer
+Dim temp As String
+Dim i As Integer
+Dim k As Integer
+Dim lastcolumn As Double
+
+startTime = Timer
+Application.ScreenUpdating = False
+Application.Calculation = xlCalculationManual
+
+'Find all links, and list them on a new sheet in column A
+aLinks = ActiveWorkbook.LinkSources(xlExcelLinks)
+If Not IsEmpty(aLinks) Then
+        If Sheets(Sheets.Count).Name = "ListOfSheetLinks" Then
+        Sheets("ListOfSheetLinks").Activate
+        ActiveSheet.Cells.Clear
+        Else
+        Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ListOfSheetLinks"
+        End If
+    For i = 1 To UBound(aLinks)
+    Cells(i + 1, 1).Value = aLinks(i)
+    Next i
+Else: MsgBox "No external links found!"
+Exit Sub
+End If
+
+'External links should end with [ and ] (e.g.: [Workbook.xlsx] format)
+    For i = 1 To UBound(aLinks)
+    lengthLink = Len(Cells(i + 1, 1).Value)
+    lastSlash = InStrRev(Cells(i + 1, 1).Value, "\")
+    temp = Cells(i + 1, 1).Value
+
+    Cells(i + 1, 1).Value = Left(temp, lastSlash) & "[" & _
+    Mid(temp, lastSlash + 1, lengthLink - lastSlash) & "]"
+    Next i
+
+'Find the links on the sheets, and list sheet names
+For i = 1 To UBound(aLinks)
+    searchLink = Right(Cells(i + 1, 1).Value, Len(Cells(i + 1, 1).Value) - InStrRev(Cells(i + 1, 1).Value, "[") + 1)
+    For Each ws In ActiveWorkbook.Worksheets
+    If ws Is ActiveSheet Then
+    Else
+        Set c = ws.Cells.Find(searchLink)
+        If Not c Is Nothing Then
+        k = ws.Index + 1
+        Cells(i + 1, k).Value = "linked"
+        End If
+    End If
+    Next ws
+Next i
+
+'Add headers and Formatting
+
+Cells(1, 1).Value = "External Link"
+For i = 1 To Sheets.Count - 1
+Cells(1, i + 1).Value = Sheets(i).Name
+Next i
+lastcolumn = Cells(1, Columns.Count).End(xlToLeft).Column
+Cells(1, lastcolumn + 1).Value = "Total # of link used"
+lastcolumn = lastcolumn + 1
+Cells(2, lastcolumn).FormulaR1C1 = "=COUNTA(RC2:RC[-1])"
+    Cells(2, lastcolumn).Select
+    On Error Resume Next
+    Selection.AutoFill Destination:=Range(Cells(2, lastcolumn), Cells(UBound(aLinks) + 1, lastcolumn))
+    Range(Cells(2, lastcolumn), Cells(UBound(aLinks) + 1, lastcolumn)).Select
+    Selection.Font.Bold = True
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = -0.149998474074526
+        .PatternTintAndShade = 0
+    End With
+    
+    Range(Cells(1, 1), Cells(1, lastcolumn)).Select
+  
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    
+    Selection.Font.Bold = True
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = -0.149998474074526
+        .PatternTintAndShade = 0
+    End With
+    
+    Range(Columns(1), Columns(lastcolumn)).EntireColumn.AutoFit
+    Range(Cells(1, 2), Cells(UBound(aLinks) + 1, lastcolumn - 1)).HorizontalAlignment = xlCenter
+    Range("B2").Select
+    ActiveWindow.FreezePanes = False
+    ActiveWindow.FreezePanes = True
+    Cells.Select
+    Selection.AutoFilter
+    Range("A1").Select
+    
+Application.Calculation = xlCalculationAutomatic
+Application.ScreenUpdating = True
+
+Duration = Timer - startTime
+MsgBox "This macro took " & Duration & " seconds to run."
+
+End Sub
